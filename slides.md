@@ -47,16 +47,17 @@ transition: fade-out
 </dev>
 
 ---
-transition: fade-out
----
-
-# Undefined Behavior & Aliasing & Optimization
-
----
+layout: center
 transition: fade-out
 ---
 
 # Undefined Behavior
+
+---
+transition: fade-out
+---
+
+# Undefined Behavior (print example)
 
 ```c++
 #include <iostream>
@@ -78,9 +79,10 @@ int main() {
 transition: fade-out
 ---
 
-# Undefined Behavior
+# Undefined Behavior (print result)
 
 ```bash
+~ g++ -O0 -o main main.cpp
 ~ ./main 
 10
 ~ g++ -O3 -o main main.cpp
@@ -93,7 +95,7 @@ transition: fade-out
 transition: fade-out
 ---
 
-# Undefined Behavior
+# Undefined Behavior (conclusion)
 
 ```c++
 #include <iostream>
@@ -115,6 +117,14 @@ int main() {
   * The language developers rely on contracts, the violation of which leads to undefined behavior (UB).
   * The presence of this contracts allow for more optimizations in the program.
   * Developers spend a lot of time and effort optimizing code, so they want to delegate this work to the compiler.
+
+---
+layout: center
+
+transition: fade-out
+---
+
+# Aliasing
 
 ---
 transition: fade-out
@@ -199,17 +209,13 @@ fn mutate(c: &RefCell<Vec<i32>>) {
   * `&mut T` - ~~mutable~~ unique reference
   * `&T` - ~~immutable~~ shared reference
 
-Compile-time analogues (not identical in behavior)
-
-  * `T` - moving
-  * `&mut T` - `unique_ptr<T>`
-  * `&T` - `shared_ptr<T>`
-
 ---
+layout: center
+
 transition: fade-out
 ---
 
-# Reborrowing?
+# Any questions?
 
 ---
 transition: fade-out
@@ -230,10 +236,45 @@ fn inc_all(nums: &mut [i32]) {
 ```
 
 ---
+layout: center
+
 transition: fade-out
 ---
 
 # Unsafe
+
+---
+transition: fade-out
+---
+
+# Unsafe keyword
+
+  * ```rust
+    // doing something unsafe
+    unsafe {}
+    ```
+  * ```rust
+    // mark using function as unsafe
+    unsafe fn dangerous {}
+    ```
+
+---
+transition: fade-out
+---
+
+# Unsafe block inside unsafe function (unsafe_op_in_unsafe_fn)
+
+In 2024 edition:
+
+```rust
+unsafe fn dangerous {
+    // check preconditions
+
+    unsafe {
+        // doing something unsafe
+    }
+}
+```
 
 ---
 transition: fade-out
@@ -329,12 +370,6 @@ transition: fade-out
 ```rust
 static mut COUNTER: u32 = 0;
 
-fn add_to_count(inc: u32) {
-    unsafe {
-        COUNTER += inc;
-    }
-}
-
 fn main() {
     add_to_count(3);
 
@@ -398,6 +433,8 @@ transition: fade-out
     some allocated object as a non-pointer type (such as integers).
 
 ---
+layout: center
+
 transition: fade-out
 ---
 
@@ -492,10 +529,253 @@ type Item = &'a mut T;
 }
 ```
 ---
+layout: center
+
 transition: fade-out
 ---
 
 # Pin
+
+---
+transition: fade-out
+---
+
+# Pin
+
+  * self-refferential
+  * move problem
+  * pin on stack
+  * pin on heap
+  * motivation
+
+---
+layout: center
+
+transition: fade-out
+---
+
+# Self-refferential struct
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (ref)
+
+```rust
+struct Test {
+    a: String,
+    b: &'what_lifetime String
+}
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (raw pointer)
+
+```rust
+struct Test {
+    a: String,
+    b: *const String,
+}
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (impl)
+
+```rust
+impl Test {
+    fn new(txt: &str) -> Self {
+        Test {
+            a: String::from(txt),
+            b: std::ptr::null(),
+        }
+    }
+
+    fn init(&mut self) {
+        let self_ref: *const String = &self.a;
+        self.b = self_ref;
+    }
+
+    fn a(&self) -> &str {
+        &self.a
+    }
+
+    fn b(&self) -> &String {
+        assert!(!self.b.is_null(), "Test::b called without Test::init being called first");
+        unsafe { &*(self.b) }
+    }
+}
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (test)
+
+```rust
+fn main() {
+    let mut test1 = Test::new("test1");
+    test1.init();
+    let mut test2 = Test::new("test2");
+    test2.init();
+
+    println!("a: {}, b: {}", test1.a(), test1.b());
+    println!("a: {}, b: {}", test2.a(), test2.b());
+}
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (test output)
+
+```rust
+fn main() {
+    let mut test1 = Test::new("test1");
+    test1.init();
+    let mut test2 = Test::new("test2");
+    test2.init();
+
+    println!("a: {}, b: {}", test1.a(), test1.b());
+    println!("a: {}, b: {}", test2.a(), test2.b());
+}
+```
+
+```
+a: test1, b: test1
+a: test2, b: test2
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (swap test)
+
+```rust
+fn main() {
+    let mut test1 = Test::new("test1");
+    test1.init();
+    let mut test2 = Test::new("test2");
+    test2.init();
+
+    println!("a: {}, b: {}", test1.a(), test1.b());
+    std::mem::swap(&mut test1, &mut test2);
+    println!("a: {}, b: {}", test2.a(), test2.b());
+}
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (swap test output)
+
+```rust
+fn main() {
+    let mut test1 = Test::new("test1");
+    test1.init();
+    let mut test2 = Test::new("test2");
+    test2.init();
+
+    println!("a: {}, b: {}", test1.a(), test1.b());
+    std::mem::swap(&mut test1, &mut test2);
+    println!("a: {}, b: {}", test2.a(), test2.b());
+}
+```
+
+```
+a: test1, b: test1
+a: test1, b: test2
+```
+
+---
+transition: fade-out
+---
+
+# Self-refferential struct (not self-refferential)
+
+<div>
+  <img src="./images/swap_problem.jpg" width="600px">
+</div>
+
+---
+layout: center
+
+transition: fade-out
+---
+
+# Pin
+
+---
+transition: fade-out
+---
+
+# Pin idea
+
+We want freeze struct in memory:
+
+```rust
+struct Test {
+    a: String,
+    b: *const String,
+}
+```
+
+---
+transition: fade-out
+---
+
+# Pin (stack)
+
+```rust
+fn main() {
+    let mut test1 = Test::new("test1");
+    test1.init();
+
+    let mut pinned_test1 = pin!(test1); // Pin&lt;&mut Testgt;
+
+    // ...
+}
+```
+
+---
+transition: fade-out
+---
+
+# Unpin
+
+pub auto trait Unpin{}
+
+---
+transition: fade-out
+---
+
+# Pin (PhantomPinned impl !Unpin)
+
+```rust
+struct Test {
+    a: String,
+    b: *const String,
+    _marker: PhantomPinned,
+}
+```
+
+---
+layout: center
+
+transition: fade-out
+---
+
+# Pin motivation
 
 ---
 transition: fade-out
@@ -605,163 +885,3 @@ struct AsyncFuture {
     read_into_buf_fut: ReadIntoBuf<'what_lifetime?>,
 }
 ```
-
----
-transition: fade-out
----
-
-# Pin (simple example)
-
-```rust
-struct Test {
-    a: String,
-    b: *const String,
-}
-```
-
----
-transition: fade-out
----
-
-# Pin (self-refferential)
-
-```rust
-impl Test {
-    fn new(txt: &str) -> Self {
-        Test {
-            a: String::from(txt),
-            b: std::ptr::null(),
-        }
-    }
-
-    fn init(&mut self) {
-        let self_ref: *const String = &self.a;
-        self.b = self_ref;
-    }
-
-    fn a(&self) -> &str {
-        &self.a
-    }
-
-    fn b(&self) -> &String {
-        assert!(!self.b.is_null(), "Test::b called without Test::init being called first");
-        unsafe { &*(self.b) }
-    }
-}
-```
-
----
-transition: fade-out
----
-
-# Pin (test without move)
-
-```rust
-fn main() {
-    let mut test1 = Test::new("test1");
-    test1.init();
-    let mut test2 = Test::new("test2");
-    test2.init();
-
-    println!("a: {}, b: {}", test1.a(), test1.b());
-    println!("a: {}, b: {}", test2.a(), test2.b());
-
-}
-```
-
-```
-a: test1, b: test1
-a: test2, b: test2
-```
-
----
-transition: fade-out
----
-
-# Pin (swap test)
-
-```rust
-fn main() {
-    let mut test1 = Test::new("test1");
-    test1.init();
-    let mut test2 = Test::new("test2");
-    test2.init();
-
-    println!("a: {}, b: {}", test1.a(), test1.b());
-    std::mem::swap(&mut test1, &mut test2);
-    println!("a: {}, b: {}", test2.a(), test2.b());
-
-}
-```
-
-```
-a: test1, b: test1
-a: test1, b: test2
-```
-
----
-transition: fade-out
----
-
-# Pin (not self-refferential)
-
-<div>
-  <img src="./images/swap_problem.jpg" width="600px">
-</div>
-
----
-transition: fade-out
----
-
-# Pin (auto Unpin)
-
-```rust
-impl Test {
-    fn new(txt: &str) -> Self {
-        Test {
-            a: String::from(txt),
-            b: std::ptr::null(),
-        }
-    }
-
-    fn init(self: Pin<&mut Self>) {
-        let self_ptr: *const String = &self.a;
-        let this = unsafe { self.get_unchecked_mut() };
-        this.b = self_ptr;
-    }
-
-    fn a(self: Pin<&Self>) -> &str {
-        &self.get_ref().a
-    }
-
-    fn b(self: Pin<&Self>) -> &String {
-        assert!(!self.b.is_null(), "Test::b called without Test::init being called first");
-        unsafe { &*(self.b) }
-    }
-}
-```
-
----
-transition: fade-out
----
-
-# Pin (PhantomPinned impl !Unpin)
-
-```rust
-struct Test {
-    a: String,
-    b: *const String,
-    _marker: PhantomPinned,
-}
-```
-
----
-transition: fade-out
----
-
-1) remove analogue with C++ smart pointers
-2) static mut another example (lazy static)
-3) memory model ? Rust => C++
-4) implicit unsafe roles (2024 edition)
-5) pin examples (stack, heap)
-6) questions after each block
